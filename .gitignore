@@ -1,0 +1,42 @@
+# =============================================================================
+# ZONARA CHARACTER ANALYTICS — .gitignore
+# =============================================================================
+
+# Python & Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+dist/
+
+# Alembic (konfigurasi lokal)
+alembic.ini
+
+# Node.js & Frontend
+node_modules/
+dist/
+build/
+.npm/
+
+# Environment (sensitif)
+.env
+.env.local
+.env.production
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/

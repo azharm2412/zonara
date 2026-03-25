@@ -1,0 +1,79 @@
+# =============================================================================
+# ZONARA CHARACTER ANALYTICS (Enterprise Edition)
+# Docker Compose Orchestration — 3 Services
+# @author  Azhar Maulana
+# @date    25 Maret 2026
+# @version 1.0
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 15 — Database Layer
+  # ---------------------------------------------------------------------------
+  db_zonara:
+    image: postgres:15-alpine
+    container_name: zonara_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zonara_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zonara_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-zonara_analytics}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_zonara:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zonara_admin} -d ${POSTGRES_DB:-zonara_analytics}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend — Application Layer
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zonara_backend
+    restart: unless-stopped
+    depends_on:
+      db_zonara:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-zonara_admin}:${POSTGRES_PASSWORD:-zonara_secure_pass}@db_zonara:5432/${POSTGRES_DB:-zonara_analytics}
+      SECRET_KEY: ${SECRET_KEY:-generate-super-secret-key-here-for-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      PROJECT_NAME: ${PROJECT_NAME:-Zonara Character Analytics API}
+      API_V1_STR: ${API_V1_STR:-/api/v1}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  # ---------------------------------------------------------------------------
+  # React Frontend — Presentation Layer (Vite Dev Server)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zonara_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+      VITE_WS_BASE_URL: ${VITE_WS_BASE_URL:-ws://localhost:8000/ws/analytics}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  pgdata_zonara:
+    driver: local
