@@ -14,7 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
+from app.models import Base
 from app.routers import auth, sessions, students, scan, analytics, export, ws_analytics
+from app.seed import seed_database
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -34,12 +36,25 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Mengelola siklus hidup aplikasi.
-    - Startup: Log konfirmasi koneksi database.
+    - Startup: Auto-create tabel database dan jalankan seeder.
     - Shutdown: Menutup connection pool engine.
 
     @param app: Instance FastAPI.
     """
     logger.info("🚀 Zonara API starting — Database: %s", settings.POSTGRES_SERVER)
+
+    # Auto-create semua tabel (idempoten — skip jika sudah ada)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        logger.info("📦 Database tables ensured.")
+
+    # Auto-seed data demo (idempoten — skip jika sudah ada)
+    try:
+        await seed_database()
+        logger.info("🌱 Seeder executed successfully.")
+    except Exception as exc:
+        logger.warning("⚠️ Seeder warning (mungkin sudah terisi): %s", str(exc))
+
     yield
     await engine.dispose()
     logger.info("🛑 Zonara API shutdown — Connection pool disposed.")
