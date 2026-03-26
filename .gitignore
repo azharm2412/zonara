@@ -12,7 +12,7 @@ venv/
 dist/
 
 # Alembic (konfigurasi lokal)
-alembic.ini
+# alembic.ini
 
 # Node.js & Frontend
 node_modules/
